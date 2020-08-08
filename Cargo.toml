@@ -1,0 +1,28 @@
+[package]
+name = "indexed-kv"
+version = "0.1.0"
+authors = ["quininer <quininer@live.com>"]
+edition = "2018"
+
+# See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
+
+[dependencies]
+wasm-bindgen = "*"
+js-sys = "*"
+web-sys = { version = "*", features = [
+	'console',
+	'Window',
+	'IdbFactory',
+	'IdbDatabase',
+	'IdbTransaction',
+	'IdbTransactionMode',
+	'IdbOpenDbRequest',
+	'IdbRequest',
+	'IdbObjectStore',
+	'Event',
+	'EventTarget',
+	'IdbCursor',
+	'IdbCursorWithValue',
+	'IdbKeyRange',
+	'DomStringList',
+] }
