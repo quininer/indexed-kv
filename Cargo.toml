@@ -25,4 +25,8 @@ web-sys = { version = "*", features = [
 	'IdbCursorWithValue',
 	'IdbKeyRange',
 	'DomStringList',
+	'DomException'
 ] }
+
+[dev-dependencies]
+wasm-bindgen-test = "*"

@@ -5,7 +5,7 @@ use wasm_bindgen::JsValue;
 
 pub type JsResult<T> = std::result::Result<T, JsError>;
 
-pub struct JsError(JsValue);
+pub struct JsError(pub(crate) JsValue);
 
 impl From<JsValue> for JsError {
     #[inline]
