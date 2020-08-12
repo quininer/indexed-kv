@@ -95,13 +95,66 @@ async fn test_idb_del_empty() {
 }
 
 #[wasm_bindgen_test]
-async fn test_idb_find() {
+async fn test_idb_find_empty() {
     let window = web_sys::window().unwrap();
-    let ikv = IndexedKv::open(&window, "testkv")
+    let ikv = IndexedKv::open(&window, "new-testkv")
         .await
         .unwrap();
 
-    let iter = ikv.find(b"")
+    let mut iter = ikv.find(b"")
         .await
         .unwrap();
+
+    let ret = iter.next()
+        .await
+        .unwrap();
+
+    assert!(ret.is_none());
+}
+
+#[wasm_bindgen_test]
+async fn test_idb_find_new() {
+    let window = web_sys::window().unwrap();
+    let ikv = IndexedKv::open(&window, "new2-testkv")
+        .await
+        .unwrap();
+
+    ikv.put(b"zero", Uint8Array::from("0".as_bytes()))
+        .await
+        .unwrap();
+    ikv.put(b"key1", Uint8Array::from("1".as_bytes()))
+        .await
+        .unwrap();
+    ikv.put(b"key2", Uint8Array::from("2".as_bytes()))
+        .await
+        .unwrap();
+    ikv.put(b"key3", Uint8Array::from("3".as_bytes()))
+        .await
+        .unwrap();
+
+    let mut iter = ikv.find(b"key")
+        .await
+        .unwrap();
+
+    while let Some(ret) = iter.next().await.unwrap() {
+        let (key, val) = ret;
+        let val = val.to_vec();
+
+        assert_eq!(&key[3..], val);
+    }
+
+    let mut iter = ikv.find(&[])
+        .await
+        .unwrap();
+
+    while let Some(ret) = iter.next().await.unwrap() {
+        let (key, val) = ret;
+        let val = val.to_vec();
+
+        if key == b"zero" {
+            assert_eq!(val, b"0");
+        } else {
+            assert_eq!(&key[3..], val);
+        }
+    }
 }

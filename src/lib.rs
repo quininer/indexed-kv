@@ -1,11 +1,12 @@
 mod error;
 mod oneshot;
+mod unbounded;
 
 use error::{ JsResult, JsError };
 use wasm_bindgen::{ JsCast, JsValue };
 use wasm_bindgen::closure::Closure;
 use js_sys::{ Uint8Array, ArrayBuffer };
-use web_sys::{ Window, IdbDatabase, IdbTransactionMode, DomException };
+use web_sys::{ Window, IdbDatabase, IdbTransactionMode, IdbCursorWithValue, DomException };
 
 
 pub struct IndexedKv {
@@ -13,8 +14,10 @@ pub struct IndexedKv {
 }
 
 pub struct Iter {
-    tr: ()
+    rx: unbounded::Receiver<Option<JsResult<Packet>>>
 }
+
+type Packet = (Vec<u8>, Uint8Array);
 
 const DEFAULT_STORE: &str = "default";
 
@@ -95,7 +98,7 @@ impl IndexedKv {
         }
     }
 
-    pub async fn find(&self, prefix: &[u8]) -> JsResult<()> {
+    pub async fn find(&self, prefix: &[u8]) -> JsResult<Iter> {
         let tr = self.db.transaction_with_str_and_mode(DEFAULT_STORE, IdbTransactionMode::Readonly)?;
         let obj = tr.object_store(DEFAULT_STORE)?;
 
@@ -105,20 +108,47 @@ impl IndexedKv {
             obj.open_cursor_with_range(Uint8Array::from(prefix).as_ref())?
         };
         let req2 = req.clone();
+        let (tx, rx) = unbounded::channel::<Option<JsResult<Packet>>>(8);
 
-        let oncursor = Closure::wrap(Box::new(move || {
-            //
+        let oncursor = Closure::wrap(Box::new(move || match req.result() {
+            Ok(ret) => {
+                let cursor = ret.unchecked_ref::<IdbCursorWithValue>();
+                let is_continue;
+
+                let _ = tx.send(if let (Ok(key), Ok(val)) = (cursor.key(), cursor.value()) {
+                    let k: ArrayBuffer = key.into();
+                    let k = Uint8Array::new(&k);
+                    let v: Uint8Array = val.into();
+
+                    is_continue = true;
+
+                    Some(Ok((k.to_vec(), v)))
+                } else {
+                    is_continue = false;
+
+                    None
+                });
+
+                if is_continue {
+                    if let Err(err) = cursor.continue_() {
+                        let _ = tx.send(Some(Err(err.into())));
+                    }
+                }
+            },
+            Err(err) => {
+                let _ = tx.send(Some(Err(err.into())));
+            }
         }) as Box<dyn FnMut()>);
         let oncursor = oncursor.into_js_value();
         req2.set_onsuccess(Some(oncursor.unchecked_ref()));
 
-        todo!()
+        Ok(Iter { rx })
     }
 }
 
 impl Iter {
-    pub async fn next(&self) -> JsResult<(Vec<u8>, Uint8Array)> {
-        todo!()
+    pub async fn next(&mut self) -> JsResult<Option<(Vec<u8>, Uint8Array)>> {
+        self.rx.next().await.flatten().transpose()
     }
 }
 

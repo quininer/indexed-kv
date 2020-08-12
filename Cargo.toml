@@ -10,7 +10,6 @@ edition = "2018"
 wasm-bindgen = "*"
 js-sys = "*"
 web-sys = { version = "*", features = [
-	'console',
 	'Window',
 	'IdbFactory',
 	'IdbDatabase',
@@ -23,7 +22,6 @@ web-sys = { version = "*", features = [
 	'EventTarget',
 	'IdbCursor',
 	'IdbCursorWithValue',
-	'IdbKeyRange',
 	'DomStringList',
 	'DomException'
 ] }
