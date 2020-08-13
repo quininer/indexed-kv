@@ -146,15 +146,19 @@ async fn test_idb_find_new() {
     let mut iter = ikv.find(&[])
         .await
         .unwrap();
+    let mut hint_zero = false;
 
     while let Some(ret) = iter.next().await.unwrap() {
         let (key, val) = ret;
         let val = val.to_vec();
 
         if key == b"zero" {
+            hint_zero = true;
             assert_eq!(val, b"0");
         } else {
             assert_eq!(&key[3..], val);
         }
     }
+
+    assert!(hint_zero);
 }

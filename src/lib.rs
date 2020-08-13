@@ -2,11 +2,12 @@ mod error;
 mod oneshot;
 mod unbounded;
 
-use error::{ JsResult, JsError };
 use wasm_bindgen::{ JsCast, JsValue };
 use wasm_bindgen::closure::Closure;
 use js_sys::{ Uint8Array, ArrayBuffer };
 use web_sys::{ Window, IdbDatabase, IdbTransactionMode, IdbCursorWithValue, DomException };
+
+pub use error::{ JsResult, JsError };
 
 
 pub struct IndexedKv {
@@ -117,7 +118,7 @@ impl IndexedKv {
 
                 let _ = tx.send(if let (Ok(key), Ok(val)) = (cursor.key(), cursor.value()) {
                     let k: ArrayBuffer = key.into();
-                    let k = Uint8Array::new(&k);
+                    let k = Uint8Array::new(k.as_ref());
                     let v: Uint8Array = val.into();
 
                     is_continue = true;
@@ -166,6 +167,7 @@ fn send_closure<T: 'static>(sender: oneshot::Sender<T>, val: T) -> JsValue {
     })
 }
 
+#[cold]
 fn cast_dom_exception(err: Result<Option<DomException>, JsValue>, default: &str) -> JsError {
     JsError(match err {
         Ok(Some(err)) => err.into(),
